@@ -29,3 +29,34 @@ Setup your inventory and choose your desired host in the playbook. Tweak your pa
 ```bash
 ansible-playbook -i inventory setup-anisette-v3-ansible.yaml -k
 ```
+
+# API Documentation
+
+## Endpoints
+
+### /CreateSession
+creates New Device session
+```json
+{"SessionID":"70248aaa-852d-4cff-be9d-e36b559c5825"}
+```
+### /Session/:id
+Get Anisette for given id
+```json
+{
+  "X-Apple-I-Client-Time": "2025-01-11T15:12:45Z",
+  "X-Apple-I-MD": "AAAABQAAABDwahBmo1iUImuQrI8wlcP7AAAABA==",
+  "X-Apple-I-MD-LU": "908BEFB7F4517B115E0CCAEC27047C4B99A76FBA8CBC4A7AA294E49BE7571B1A",
+  "X-Apple-I-MD-M": "SKHYDiXcvGSW1qWGaa2WzwsUtn4EP7ZzNY7nFbB4N0Gt3snuNUeAogNfvc6gLwLqMFqC893FMfeW289Q",
+  "X-Apple-I-MD-RINFO": "17106176",
+  "X-Apple-I-SRL-NO": "0",
+  "X-Apple-I-TimeZone": "UTC",
+  "X-Apple-Locale": "en_US",
+  "X-MMe-Client-Info": "\u003CMacBookPro13,2\u003E \u003CmacOS;13.1;22C65\u003E \u003Ccom.apple.AuthKit/1 (com.apple.dt.Xcode/3594.4.19)\u003E",
+  "X-Mme-Device-Id": "DCDBBFDB-AC1E-45B3-9026-EB6AE836173E"
+}
+```
+### /DestroySession/:id
+Deletes given device session with id
+```json
+{"status": "success", "message": "Session destroyed"}
+```

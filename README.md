@@ -16,7 +16,7 @@ docker run -d --restart always --name anisette-v3 -p 6969:6969 --volume anisette
 ## Compile using dub
 
 ```bash
-apt update && apt install --no-install-recommends -y ca-certificates ldc git clang dub libz-dev libssl-dev
+sudı apt update && sudo apt install --no-install-recommends -y ca-certificates ldc git clang dub libz-dev libssl-dev
 git clone https://github.com/koftrciali/anisette-v3-server.git; cd anisette-v3-server
 DC=ldc2 dub build -c "static" --build-mode allAtOnce -b release --compiler=ldc2
 stat anisette-v3-server

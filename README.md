@@ -1,5 +1,7 @@
 # anisette-v3-server
 
+koftrciali fork version
+
 A supposedly lighter alternative to [omnisette-server](https://github.com/SideStore/omnisette-server)
 
 Like `omnisette-server`, it supports both currently supported SideStore's protocols (anisette-v1 and 
@@ -15,7 +17,7 @@ docker run -d --restart always --name anisette-v3 -p 6969:6969 --volume anisette
 
 ```bash
 apt update && apt install --no-install-recommends -y ca-certificates ldc git clang dub libz-dev libssl-dev
-git clone https://github.com/Dadoum/anisette-v3-server.git; cd anisette-v3-server
+git clone https://github.com/koftrciali/anisette-v3-server.git; cd anisette-v3-server
 DC=ldc2 dub build -c "static" --build-mode allAtOnce -b release --compiler=ldc2
 stat anisette-v3-server
 ```

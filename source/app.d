@@ -182,21 +182,157 @@ int main(string[] args) {
 	return runApplication(&args);
 }
 
+
+
+import std.datetime.systime;
+import std.datetime.timezone;
+import core.time;
+		
+import std.conv;
+import std.json;
+import std.random;
+import std.range;
+
+
+struct SessionContext {
+    ADI adi;
+	Device device;
+}
+SessionContext[string] sessions;
+
+
 class AnisetteService {
+	@method(HTTPMethod.GET)
+	@path("/CreateSession")
+	void CreateSession(HTTPServerRequest req, HTTPServerResponse res){
+		auto log = getLogger();
+		auto SessionID = randomUUID().toString();
+		log.info("Creating Session " ~ SessionID);
+		string devicesPath = expandTilde("~/.config/anisette-v3/devices");
+		string devicePath = devicesPath ~ "/" ~ SessionID;
+		if (!file.exists(devicePath)) {
+			file.mkdirRecurse(devicePath);
+		}
+		auto device = new Device(devicePath.buildPath("device.json"));
+		auto adi = new ADI(libraryPath);
+	    adi.provisioningPath = devicePath;
+
+		if (!device.initialized) {
+			log.info("Creating machine... ");
+			device.serverFriendlyDescription = clientInfo;
+			device.uniqueDeviceIdentifier = randomUUID().toString().toUpper();
+			device.adiIdentifier = (cast(ubyte[]) rndGen.take(2).array()).toHexString().toLower();
+			device.localUserUUID = (cast(ubyte[]) rndGen.take(8).array()).toHexString().toUpper();
+			log.info("Machine creation done!");
+		}
+
+		adi.identifier = device.adiIdentifier;
+		if (!adi.isMachineProvisioned(dsId)) {
+			log.info("Machine requires provisioning... ");
+
+			ProvisioningSession provisioningSession = new ProvisioningSession(adi, device);
+			provisioningSession.provision(dsId);
+			log.info("Provisioning done!");
+		}
+		sessions[SessionID] = SessionContext(adi,device);
+		JSONValue responseJson = [
+			"SessionID": SessionID,
+		];
+		res.writeBody(responseJson.toString(JSONOptions.doNotEscapeSlashes), "application/json");
+	}
+	@method(HTTPMethod.GET)
+    @path("/Session/:id") // :id represents the placeholder for session ID
+    void getSession(HTTPServerRequest req, HTTPServerResponse res) {
+		auto id = req.params["id"];
+        if (id in sessions) {
+            auto sessionContext = sessions[id];
+            auto log = getLogger();
+			log.info("[<<] anisette-v1 session request");
+			try {
+auto time = Clock.currTime();
+
+			auto otp = sessionContext.adi.requestOTP(dsId);
+
+
+			JSONValue responseJson = [
+				"X-Apple-I-Client-Time": time.toISOExtString.split('.')[0] ~ "Z",
+				"X-Apple-I-MD":  Base64.encode(otp.oneTimePassword),
+				"X-Apple-I-MD-M": Base64.encode(otp.machineIdentifier),
+				"X-Apple-I-MD-RINFO": to!string(17106176),
+				"X-Apple-I-MD-LU": sessionContext.device.localUserUUID,
+				"X-Apple-I-SRL-NO": "0",
+				"X-MMe-Client-Info": sessionContext.device.serverFriendlyDescription,
+				"X-Apple-I-TimeZone": time.timezone.dstName,
+				"X-Apple-Locale": "en_US",
+				"X-Mme-Device-Id": sessionContext.device.uniqueDeviceIdentifier,
+			];
+
+			res.headers["Implementation-Version"] = brandingCode;
+			res.writeBody(responseJson.toString(JSONOptions.doNotEscapeSlashes), "application/json");
+			}catch (Throwable t){
+					log.info("message:" ~ typeid(t).name ~ ": " ~ t.msg);
+			}
+			
+        } else {
+            res.statusCode = HTTPStatus.notFound;
+            res.writeBody(`{"error": "Session not found"}`, "application/json");
+        }
+    }
+	@method(HTTPMethod.GET)
+	@path("/DestroySession/:id") // :id represents the placeholder for session ID
+	void DestroySession(HTTPServerRequest req, HTTPServerResponse res) {
+    	auto log = getLogger();
+    	auto SessionID = req.params["id"];
+    
+    	// Log the session destruction attempt
+    	log.info("Destroying session " ~ SessionID);
+
+    	// Check if the session exists before attempting to remove it
+    	if (SessionID in sessions) {
+        	// Remove session from the map
+        	sessions.remove(SessionID);
+        	log.info("Session " ~ SessionID ~ " destroyed successfully.");
+        
+        	// Remove the corresponding directory recursively
+        	string devicesPath = expandTilde("~/.config/anisette-v3/devices");
+        	string devicePath = devicesPath ~ "/" ~ SessionID;
+        
+        	// Ensure the directory exists before trying to remove it
+        	if (file.exists(devicePath)) {
+				try{
+					file.rmdirRecurse(devicePath);
+				}catch (Throwable t){
+					log.info("message:" ~ typeid(t).name ~ ": " ~ t.msg);
+				}
+            	
+            	log.info("Device directory for session " ~ SessionID ~ " removed.");
+        	} else {
+            	log.warn("Device directory for session " ~ SessionID ~ " not found.");
+        	}
+
+        	// Send a success response
+        	res.writeBody(`{"status": "success", "message": "Session destroyed"}`, "application/json");
+    	} else {
+        	// Log if session does not exist
+        	log.warn("Session " ~ SessionID ~ " not found.");
+        
+        	// Send a failure response
+        	res.writeBody(`{"status": "failure", "message": "Session not found"}`, "application/json");
+    	}
+	}
+
+
+
 	@method(HTTPMethod.GET)
 	@path("/")
 	void handleV1Request(HTTPServerRequest req, HTTPServerResponse res) {
-		import std.datetime.systime;
-		import std.datetime.timezone;
-		import core.time;
+		
 		auto log = getLogger();
 		log.info("[<<] anisette-v1 request");
 		auto time = Clock.currTime();
 
 		auto otp = v1Adi.requestOTP(dsId);
 
-		import std.conv;
-		import std.json;
 
 		JSONValue responseJson = [
 			"X-Apple-I-Client-Time": time.toISOExtString.split('.')[0] ~ "Z",

@@ -338,7 +338,7 @@ class AnisetteService
 				log.info("Creating machine... ");
 				log.info("Machine creation done!");
 			}
-
+			log.info(device.adiIdentifier);
 			adi.identifier = device.adiIdentifier;
 			if (!adi.isMachineProvisioned(dsId))
 			{
@@ -464,9 +464,9 @@ class AnisetteService
 			import std.uuid;
 
 			auto json = req.json();
-			ubyte[] identifierBytes = Base64.decode(json["identifier"].to!string());
+			
 			ubyte[] adi_pb = Base64.decode(json["adi_pb"].to!string());
-			identifier = UUID(identifierBytes[0 .. 16]).toString();
+			identifier = json["identifier"].to!string();
 
 			auto provisioningPath = file.getcwd()
 				.buildPath("provisioning")
@@ -489,13 +489,12 @@ class AnisetteService
 
 			scope ADI adi = makeGarbageCollectedADI(libraryPath);
 			adi.provisioningPath = provisioningPath;
-			adi.identifier = identifier.toUpper()[0 .. 16];
+			adi.identifier = identifier;
 
 			auto otp = adi.requestOTP(dsId);
 			file.rmdirRecurse(provisioningPath);
 
 			JSONValue response = [ // Provision does no longer have a concept of 'request headers'
-				"result": "Headers",
 				"X-Apple-I-MD": Base64.encode(otp.oneTimePassword),
 				"X-Apple-I-MD-M": Base64.encode(otp.machineIdentifier),
 				"X-Apple-I-MD-RINFO": "17106176",

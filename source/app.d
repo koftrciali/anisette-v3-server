@@ -470,7 +470,7 @@ class AnisetteService
 
 			auto provisioningPath = file.getcwd()
 				.buildPath("provisioning")
-				.buildPath(identifier);
+				.buildPath(randomUUID().toString());
 
 			if (file.exists(provisioningPath))
 			{

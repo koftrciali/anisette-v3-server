@@ -153,34 +153,7 @@ int main(string[] args)
 	}
 
 	// Initializing ADI and machine if it has not already been made.
-	v1Device = new Device(configurationPath.buildPath("device.json"));
-	v1Adi = new ADI(libraryPath);
-	v1Adi.provisioningPath = configurationPath;
-
-	if (!v1Device.initialized)
-	{
-		log.info("Creating machine... ");
-
-		import std.random;
-		import std.range;
-
-		v1Device.serverFriendlyDescription = clientInfo;
-		v1Device.uniqueDeviceIdentifier = randomUUID().toString().toUpper();
-		v1Device.adiIdentifier = (cast(ubyte[]) rndGen.take(2).array()).toHexString().toLower();
-		v1Device.localUserUUID = (cast(ubyte[]) rndGen.take(8).array()).toHexString().toUpper();
-
-		log.info("Machine creation done!");
-	}
-
-	v1Adi.identifier = v1Device.adiIdentifier;
-	if (!v1Adi.isMachineProvisioned(dsId))
-	{
-		log.info("Machine requires provisioning... ");
-
-		ProvisioningSession provisioningSession = new ProvisioningSession(v1Adi, v1Device);
-		provisioningSession.provision(dsId);
-		log.info("Provisioning done!");
-	}
+	
 
 	if (skipServerStartup)
 	{
@@ -417,19 +390,10 @@ class AnisetteService
 		log.info("[<<] anisette-v1 request");
 		auto time = Clock.currTime();
 
-		auto otp = v1Adi.requestOTP(dsId);
+		
 
 		JSONValue responseJson = [
-			"X-Apple-I-Client-Time": time.toISOExtString.split('.')[0] ~ "Z",
-			"X-Apple-I-MD": Base64.encode(otp.oneTimePassword),
-			"X-Apple-I-MD-M": Base64.encode(otp.machineIdentifier),
-			"X-Apple-I-MD-RINFO": to!string(17106176),
-			"X-Apple-I-MD-LU": v1Device.localUserUUID,
-			"X-Apple-I-SRL-NO": "0",
-			"X-MMe-Client-Info": "<iPhone8,1> <iPhone OS;15.8.2;19H384> <com.apple.AuthKit/1 (com.apple.Preferences/1112.96)>",
-			"X-Apple-I-TimeZone": time.timezone.dstName,
-			"X-Apple-Locale": "en_US",
-			"X-Mme-Device-Id": v1Device.uniqueDeviceIdentifier,
+			"status" : "ready"
 		];
 
 		res.headers["Implementation-Version"] = brandingCode;
